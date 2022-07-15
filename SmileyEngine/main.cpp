@@ -5,24 +5,10 @@
 #include <string>
 #include "main.h"
 
-std::string readFile(const char* filePath) {
-  std::string content;
-  std::ifstream fileStream(filePath, std::ios::in);
-
-  if (!fileStream.is_open()) {
-    std::cerr << "Could not read file " << filePath << ". File does not exist." << std::endl;
-    return "";
-  }
-
-  std::string line = "";
-  while (!fileStream.eof()) {
-    std::getline(fileStream, line);
-    content.append(line + "\n");
-  }
-
-  fileStream.close();
-  return content;
-}
+#include "Shader.h"
+#include "VertexBuffer.h"
+#include "ElementBuffer.h"
+#include "VertexArrayObject.h"
 
 int main() {
 
@@ -37,10 +23,17 @@ int main() {
   GLfloat vertices[] = {
     -0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower left corner
     0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower right corner
-    0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, // Upper corner    
-    0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower right corner
-    0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, // Upper corner,
-    0.5f, 0.8f , 0.0f, // New Point
+    0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, // Upper corner
+    -0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner left
+    0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner right
+    0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f // Inner down
+  };
+
+  // Indices for vertices order
+  GLuint indices[] = {
+    0, 3, 5, // Lower left triangle
+    3, 2, 4, // Lower right triangle
+    5, 4, 1 // Upper triangle
   };
 
   // Create Window in GLFW
@@ -53,49 +46,20 @@ int main() {
   // OPEN GL Code
   glViewport(0, 0, 800, 600);
 
-  // Create Shaders and Gfx Program
-  std::string vertexShaderStr = readFile("BasicVertexShader.glsl");
-  const char* vertexShaderSource = vertexShaderStr.c_str();
-  GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShader);
+ 
+  Shader shader("BasicVertexShader.glsl", "BasicFragmentShader.glsl"); 
+  
+  VertexArrayObject vertexArrayObject;
+  vertexArrayObject.Bind();
 
-  std::string fragmetShaderStr = readFile("BasicFragmentShader.glsl");
-  const char* fragmetShaderSource = fragmetShaderStr.c_str();
-  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmetShaderSource, NULL);
-  glCompileShader(fragmentShader);
+  VertexBuffer vertexBuffer(vertices, sizeof(vertices));
+  ElementBuffer elementBuffer(indices, sizeof(indices));
 
-  GLuint shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
+  vertexArrayObject.LinkVertexBuffer(vertexBuffer, 0);
 
-  // Tell the Gfx-Card to use this program
-  glLinkProgram(shaderProgram);
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-
-  // Create Vertex Buffer as Input for the Gfx Program
-  GLuint VAO, VBO;
-
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-
-  glBindVertexArray(VAO);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
-
-  glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  glfwSwapBuffers(window);
+  vertexArrayObject.Unbind();
+  vertexBuffer.Unbind();
+  elementBuffer.Unbind();
 
   // Main Loop
   while (!glfwWindowShouldClose(window)) {
@@ -103,9 +67,11 @@ int main() {
 
     glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+  
+    shader.Activate();
+
+    vertexArrayObject.Bind();
+    glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
     glfwSwapBuffers(window);
 
@@ -113,9 +79,10 @@ int main() {
 
   // Shutdown  
 
-  glDeleteVertexArrays(1, &VAO);
-  glDeleteBuffers(1, &VBO);
-  glDeleteProgram(shaderProgram);
+  vertexArrayObject.Delete();
+  vertexBuffer.Delete();
+  elementBuffer.Delete();
+  shader.Delete();
 
   glfwDestroyWindow(window);
   glfwTerminate();
