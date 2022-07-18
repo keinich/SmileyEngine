@@ -10,7 +10,14 @@ public:
 
   VertexArrayObject();
 
-  void LinkVertexBuffer(VertexBuffer vertexBuffer, GLuint layout);
+  void LinkAttrib(
+    VertexBuffer vertexBuffer,
+    GLuint layout,
+    GLuint numComponents,
+    GLenum type,
+    GLsizeiptr stride,
+    void* offset
+  );
 
   void Bind();
   void Unbind();

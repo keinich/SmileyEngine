@@ -4,9 +4,16 @@ VertexArrayObject::VertexArrayObject() {
   glGenVertexArrays(1, &_Handle);
 }
 
-void VertexArrayObject::LinkVertexBuffer(VertexBuffer vertexBuffer, GLuint layout) {
+void VertexArrayObject::LinkAttrib(
+  VertexBuffer vertexBuffer, 
+  GLuint layout,
+  GLuint numComponents,
+  GLenum type,
+  GLsizeiptr stride,
+  void* offset
+) {
   vertexBuffer.Bind();
-  glVertexAttribPointer(layout, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(layout, numComponents, GL_FLOAT, GL_FALSE, stride, offset);
   glEnableVertexAttribArray(layout);
   vertexBuffer.Unbind();
 }

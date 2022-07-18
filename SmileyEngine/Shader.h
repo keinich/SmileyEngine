@@ -17,4 +17,6 @@ private:
 
   GLuint _Handle;
 
+  void compileErrors(unsigned int shader, const char* type);
+
 };
